@@ -160,7 +160,8 @@ export default function BoardCarousel({
                           layoutId={p.sessionId}
                           className={cn(
                             "p-0.5 sm:p-1 rounded-full shadow-md border-2",
-                            isMe ? "bg-orange-500 border-white text-white" : ring
+                            ring,
+                            isMe && "ring-2 ring-white/90 ring-offset-1 ring-offset-neutral-800 z-10 scale-110"
                           )}
                         >
                           <Icon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />

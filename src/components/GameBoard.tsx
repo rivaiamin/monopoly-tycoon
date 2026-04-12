@@ -12,7 +12,7 @@ import { useVisualPawnPositions } from "../hooks/useVisualPawnPositions";
 import { useSmoothCarouselCenter } from "../hooks/useSmoothCarouselCenter";
 import { useGameLogToasts } from "../hooks/useGameLogToasts";
 import { Car, Copy, Check, Shield } from "lucide-react";
-import { TOKEN_ICONS } from "../lib/boardTheme";
+import { TOKEN_ICONS, TOKEN_ACCENT_BORDER } from "../lib/boardTheme";
 
 interface GameBoardProps {
   room: Room<GameState>;
@@ -132,7 +132,8 @@ export default function GameBoard({ room, onLeave }: GameBoardProps) {
             <div
               className={cn(
                 "px-3 sm:px-4 py-1.5 rounded-full border-2 font-bold uppercase tracking-wide text-xs sm:text-sm flex items-center gap-2",
-                "border-amber-500/80 bg-amber-950/40 text-amber-100"
+                "bg-neutral-950/80 text-neutral-100",
+                TOKEN_ACCENT_BORDER[currentTurnPlayer.token] ?? "border-amber-500"
               )}
             >
               <TurnIcon className="w-4 h-4 shrink-0" />

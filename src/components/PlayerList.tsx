@@ -1,7 +1,13 @@
 import React from "react";
 import { Player, Space } from "../game/schema";
 import { cn } from "../lib/utils";
-import { GROUP_COLORS, TOKEN_ICONS } from "../lib/boardTheme";
+import {
+  GROUP_COLORS,
+  TOKEN_ICONS,
+  TOKEN_ACCENT_BG,
+  TOKEN_ACCENT_BORDER,
+  TOKEN_ACCENT_TEXT,
+} from "../lib/boardTheme";
 import { Car, Coins, CheckCircle2 } from "lucide-react";
 
 const STARTING_GOLD = 1500;
@@ -42,24 +48,22 @@ export default function PlayerList({ players, board, currentTurnId, myId }: Play
           const goldPct = player.isBankrupt
             ? 0
             : Math.min(100, (player.balance / STARTING_GOLD) * 100);
+          const chipBg = TOKEN_ACCENT_BG[player.token] ?? "bg-neutral-600";
+          const accentBorder = TOKEN_ACCENT_BORDER[player.token] ?? "border-neutral-600";
+          const accentText = TOKEN_ACCENT_TEXT[player.token] ?? "text-neutral-400";
 
           return (
             <div
               key={player.sessionId}
               className={cn(
-                "rounded-xl border p-3 flex flex-col gap-2.5 transition-colors duration-300",
+                "rounded-xl border-2 p-3 flex flex-col gap-2.5 transition-colors duration-300",
                 isTurn
-                  ? "border-amber-500/70 bg-neutral-900/90 shadow-[0_0_18px_rgba(245,158,11,0.12)]"
-                  : "border-neutral-800 bg-neutral-950/80 opacity-90"
+                  ? cn("bg-neutral-900/90", accentBorder)
+                  : "border-neutral-800 bg-neutral-950/80 opacity-95"
               )}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className={cn(
-                    "p-2.5 rounded-lg shrink-0 text-white",
-                    player.sessionId === myId ? "bg-orange-600" : "bg-neutral-700"
-                  )}
-                >
+                <div className={cn("p-2.5 rounded-lg shrink-0 text-white shadow-inner", chipBg)}>
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -73,7 +77,7 @@ export default function PlayerList({ players, board, currentTurnId, myId }: Play
                       {player.name}
                     </span>
                     {player.sessionId === myId && (
-                      <span className="text-[9px] text-amber-600/90 font-semibold">You</span>
+                      <span className={cn("text-[9px] font-semibold", accentText)}>You</span>
                     )}
                     {player.isReady && !currentTurnId && (
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -82,19 +86,19 @@ export default function PlayerList({ players, board, currentTurnId, myId }: Play
                       <span className="text-[9px] uppercase text-amber-600 font-bold">Jail</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-amber-400 font-mono text-xs mt-0.5">
+                  <div className={cn("flex items-center gap-1 font-mono text-xs mt-0.5", accentText)}>
                     <Coins className="w-3.5 h-3.5 shrink-0" />
                     {player.isBankrupt ? "—" : `${player.balance} G`}
                   </div>
                 </div>
                 {isTurn && (
-                  <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                  <div className={cn("w-2 h-2 rounded-full animate-pulse shrink-0", chipBg)} />
                 )}
               </div>
 
               <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-amber-500 transition-all duration-500"
+                  className={cn("h-full transition-all duration-500", chipBg)}
                   style={{ width: `${goldPct}%` }}
                 />
               </div>

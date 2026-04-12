@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { User, Car, Plane, Ship, Anchor, Hash } from "lucide-react";
+import { User, Car, Plane, Ship, Anchor, Dog, Cat, Crown, Gem, Hash } from "lucide-react";
 import { cn } from "../lib/utils";
 
 interface LobbyProps {
@@ -11,6 +11,10 @@ const TOKENS = [
   { id: "plane", icon: Plane, label: "Airplane" },
   { id: "ship", icon: Ship, label: "Steamship" },
   { id: "anchor", icon: Anchor, label: "Anchor" },
+  { id: "dog", icon: Dog, label: "Dog" },
+  { id: "cat", icon: Cat, label: "Cat" },
+  { id: "crown", icon: Crown, label: "Crown" },
+  { id: "gem", icon: Gem, label: "Gem" },
 ];
 
 export default function Lobby({ onJoin }: LobbyProps) {
