@@ -32,7 +32,7 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
   if (state.gameOver) {
     const winner = state.winnerId ? state.players.get(state.winnerId) : null;
     return (
-      <div className="text-center py-4 space-y-2">
+      <div className="rounded-xl border border-neutral-800 bg-neutral-900/80 p-6 text-center space-y-3 min-h-[160px] flex flex-col items-center justify-center">
         <Trophy className="w-10 h-10 mx-auto text-amber-400" />
         <p className="font-bold text-lg text-amber-100">
           {winner ? `${winner.name} wins!` : "Game over"}
@@ -84,21 +84,24 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
     state.freeParkingPot > 0;
 
   return (
-    <div className="grid grid-cols-1 gap-2">
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900/80 p-5 flex flex-col gap-3 min-h-[180px]">
       {canRoll && (
-        <button
-          type="button"
-          onClick={() => room.send("roll")}
-          className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-        >
-          <Dices className="w-5 h-5" />
-          ROLL DICE
-        </button>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <h3 className="text-lg font-bold text-white">Your move</h3>
+          <button
+            type="button"
+            onClick={() => room.send("roll")}
+            className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.97] shadow-lg"
+          >
+            <Dices className="w-6 h-6" />
+            Roll dice
+          </button>
+        </div>
       )}
 
       {jailChoice && (
         <div className="space-y-2">
-          <p className="text-xs text-center text-zinc-400 font-medium">You are in Jail</p>
+          <p className="text-xs text-center text-neutral-400 font-medium">You are in Jail</p>
           <button
             type="button"
             onClick={() => room.send("jail_pay")}
@@ -121,7 +124,7 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
           <button
             type="button"
             onClick={() => room.send("jail_roll")}
-            className="w-full bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2"
+            className="w-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2"
           >
             <Dices className="w-4 h-4" />
             Roll for doubles
@@ -129,43 +132,52 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
         </div>
       )}
 
-      {canBuy && (
-        <button
-          type="button"
-          onClick={() => room.send("buy")}
-          className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-        >
-          <ShoppingCart className="w-5 h-5" />
-          BUY {currentSpace.name.toUpperCase()} (${currentSpace.price})
-        </button>
-      )}
-
-      {canDecline && (
-        <button
-          type="button"
-          onClick={() => room.send("decline_purchase")}
-          className="w-full bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2"
-        >
-          <Gavel className="w-4 h-4" />
-          Decline (auction)
-        </button>
+      {(canBuy || canDecline) && (
+        <div className="space-y-3 text-center">
+          <div>
+            <h3 className="text-lg font-bold text-white leading-tight">{currentSpace.name}</h3>
+            <p className="text-neutral-400 text-xs mt-1">Unowned — you may buy or send to auction</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
+            {canBuy && (
+              <button
+                type="button"
+                onClick={() => room.send("buy")}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-md"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                Buy (${currentSpace.price})
+              </button>
+            )}
+            {canDecline && (
+              <button
+                type="button"
+                onClick={() => room.send("decline_purchase")}
+                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"
+              >
+                <Gavel className="w-4 h-4" />
+                Decline (auction)
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {inAuction && !currentPlayer?.isBankrupt && (
-        <div className="rounded-xl border border-zinc-700 p-3 space-y-2 bg-zinc-950/80">
-          <p className="text-xs text-zinc-400 text-center font-medium">Auction in progress</p>
+        <div className="rounded-xl border border-neutral-700 p-3 space-y-2 bg-neutral-950/60">
+          <p className="text-xs text-neutral-400 text-center font-medium">Auction in progress</p>
           <div className="flex gap-2 items-center">
             <input
               type="number"
               min={1}
               value={bidAmount}
               onChange={(e) => setBidAmount(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono"
+              className="flex-1 bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-sm font-mono"
             />
             <button
               type="button"
               onClick={() => room.send("auction_bid", { amount: bidAmount })}
-              className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded-lg font-bold text-sm"
+              className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-lg font-bold text-sm"
             >
               Bid
             </button>
@@ -173,7 +185,7 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
           <button
             type="button"
             onClick={() => room.send("auction_pass")}
-            className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium"
+            className="w-full py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-sm font-medium"
           >
             Pass
           </button>
@@ -192,11 +204,11 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
       )}
 
       {canManage && (
-        <div className="border border-zinc-800 rounded-xl overflow-hidden">
+        <div className="border border-neutral-800 rounded-xl overflow-hidden">
           <button
             type="button"
             onClick={() => setManageOpen(!manageOpen)}
-            className="w-full py-2 text-sm font-semibold text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800"
+            className="w-full py-2 text-sm font-semibold text-neutral-300 bg-neutral-900/80 hover:bg-neutral-800"
           >
             {manageOpen ? "Hide" : "Manage"} properties
           </button>
@@ -205,9 +217,9 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
               {myOwned.map((sp) => (
                 <div
                   key={sp.index}
-                  className="flex flex-wrap gap-1 items-center justify-between text-[10px] bg-zinc-950 p-2 rounded-lg"
+                  className="flex flex-wrap gap-1 items-center justify-between text-[10px] bg-neutral-950 p-2 rounded-lg"
                 >
-                  <span className="text-zinc-300 truncate flex-1 min-w-0">{sp.name}</span>
+                  <span className="text-neutral-300 truncate flex-1 min-w-0">{sp.name}</span>
                   {sp.type === "property" && !sp.isMortgaged && (
                     <button
                       type="button"
@@ -252,20 +264,23 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
       )}
 
       {canEndTurn && (
-        <button
-          type="button"
-          onClick={() => room.send("end_turn")}
-          className={cn(
-            "w-full font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]",
-            state.pendingExtraRoll
-              ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-              : "bg-zinc-800 hover:bg-zinc-700 text-white"
-          )}
-          disabled={state.pendingExtraRoll}
-        >
-          <Check className="w-5 h-5" />
-          END TURN
-        </button>
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h3 className="text-sm font-semibold text-neutral-300">Action completed</h3>
+          <button
+            type="button"
+            onClick={() => room.send("end_turn")}
+            className={cn(
+              "w-full font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg",
+              state.pendingExtraRoll
+                ? "bg-neutral-800 text-neutral-500 cursor-not-allowed"
+                : "bg-neutral-100 text-neutral-900 hover:bg-white"
+            )}
+            disabled={state.pendingExtraRoll}
+          >
+            <Check className="w-5 h-5" />
+            End turn
+          </button>
+        </div>
       )}
 
       {state.pendingExtraRoll && isMyTurn && (
@@ -273,7 +288,7 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
       )}
 
       {!isMyTurn && !inAuction && (
-        <div className="text-center py-3 text-zinc-500 text-sm font-medium animate-pulse">
+        <div className="text-center py-4 text-neutral-500 text-sm font-medium animate-pulse flex-1 flex items-center justify-center">
           Waiting for other players...
         </div>
       )}

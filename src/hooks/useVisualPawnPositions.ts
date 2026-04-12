@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
-const STEP_MS = 82;
+/** Matches prototype carousel “marching” pace (one ring step per tick). */
+const STEP_MS = 250;
 
 /**
  * Advances each pawn one space at a time along the board ring until it matches the server position.
