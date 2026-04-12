@@ -1,0 +1,5 @@
+{
+  "name": "Property Tycoon",
+  "description": "A real-time multiplayer Monopoly clone built with Colyseus and React.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+/* SweetAlert2 toasts — match game dark theme */
+.swal2-toast-game-log {
+  background: rgb(24 24 27) !important;
+  color: rgb(244 244 245) !important;
+  border: 1px solid rgb(63 63 70) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45) !important;
+}
+.swal2-toast-game-log .swal2-title {
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  margin: 0.25rem 0 !important;
+}
