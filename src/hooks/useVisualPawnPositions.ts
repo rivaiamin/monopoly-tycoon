@@ -3,15 +3,23 @@ import { useEffect, useRef, useState } from "react";
 /** Matches prototype carousel “marching” pace (one ring step per tick). */
 const STEP_MS = 250;
 
+interface UseVisualPawnPositionsOptions {
+  /** When true, pawns do not advance toward their server positions. */
+  paused?: boolean;
+}
+
 /**
  * Advances each pawn one space at a time along the board ring until it matches the server position.
  */
 export function useVisualPawnPositions(
-  players: { sessionId: string; position: number }[]
+  players: { sessionId: string; position: number }[],
+  options: UseVisualPawnPositionsOptions = {}
 ): Record<string, number> {
   const [visual, setVisual] = useState<Record<string, number>>({});
   const playersRef = useRef(players);
   playersRef.current = players;
+  const pausedRef = useRef(!!options.paused);
+  pausedRef.current = !!options.paused;
 
   const posKey = players.map((p) => `${p.sessionId}:${p.position}`).join("|");
 
@@ -33,6 +41,7 @@ export function useVisualPawnPositions(
 
   useEffect(() => {
     const id = setInterval(() => {
+      if (pausedRef.current) return;
       const pl = playersRef.current;
       setVisual((v) => {
         const n = { ...v };

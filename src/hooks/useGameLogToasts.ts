@@ -1,16 +1,25 @@
 import { useEffect, useRef } from "react";
 import Swal from "sweetalert2";
 
+interface UseGameLogToastsOptions {
+  /** When true, new lines are queued and shown once unpaused. */
+  paused?: boolean;
+}
+
 /**
  * Toast notification for each new game log line (SweetAlert2).
  * Does not toast the initial batch of lines when first connecting to a room.
  */
-export function useGameLogToasts(log: readonly string[]) {
+export function useGameLogToasts(log: readonly string[], options: UseGameLogToastsOptions = {}) {
   const prevLen = useRef(0);
+  const pausedRef = useRef(!!options.paused);
+  pausedRef.current = !!options.paused;
+  const pending = useRef<string[]>([]);
 
   useEffect(() => {
     if (log.length === 0) {
       prevLen.current = 0;
+      pending.current = [];
       return;
     }
 
@@ -18,15 +27,19 @@ export function useGameLogToasts(log: readonly string[]) {
     // Multiple lines at once is almost always the snapshot when joining a room.
     if (prevLen.current === 0 && log.length > 0) {
       if (log.length === 1) {
-        void Swal.fire({
-          toast: true,
-          position: "bottom-end",
-          title: log[0],
-          showConfirmButton: false,
-          timer: 2600,
-          timerProgressBar: true,
-          customClass: { popup: "swal2-toast-game-log" },
-        });
+        if (pausedRef.current) {
+          pending.current.push(log[0]);
+        } else {
+          void Swal.fire({
+            toast: true,
+            position: "bottom-end",
+            title: log[0],
+            showConfirmButton: false,
+            timer: 2600,
+            timerProgressBar: true,
+            customClass: { popup: "swal2-toast-game-log" },
+          });
+        }
       }
       prevLen.current = log.length;
       return;
@@ -34,11 +47,21 @@ export function useGameLogToasts(log: readonly string[]) {
 
     if (log.length < prevLen.current) {
       prevLen.current = log.length;
+      pending.current = [];
       return;
     }
 
     for (let i = prevLen.current; i < log.length; i++) {
-      const text = log[i];
+      pending.current.push(log[i]);
+    }
+    prevLen.current = log.length;
+  }, [log]);
+
+  useEffect(() => {
+    if (pausedRef.current) return;
+    if (pending.current.length === 0) return;
+
+    for (const text of pending.current) {
       void Swal.fire({
         toast: true,
         position: "bottom-end",
@@ -51,6 +74,6 @@ export function useGameLogToasts(log: readonly string[]) {
         },
       });
     }
-    prevLen.current = log.length;
-  }, [log]);
+    pending.current = [];
+  }, [options.paused]);
 }

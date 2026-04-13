@@ -23,6 +23,7 @@ export default function GameBoard({ room, onLeave }: GameBoardProps) {
   const [copied, setCopied] = useState(false);
   const [passGoFlash, setPassGoFlash] = useState(false);
   const prevTurnVisualRef = useRef<number | null>(null);
+  const [pausePawnMarch, setPausePawnMarch] = useState(false);
   const [state, setState] = useState<GameState | null>(() =>
     room.state ? room.state.clone() : null
   );
@@ -46,8 +47,7 @@ export default function GameBoard({ room, onLeave }: GameBoardProps) {
     () => playersList.map((p) => ({ sessionId: p.sessionId, position: p.position })),
     [playersList]
   );
-  const visualPositions = useVisualPawnPositions(playerPositions);
-  useGameLogToasts(state ? Array.from(state.log) : []);
+  const visualPositions = useVisualPawnPositions(playerPositions, { paused: pausePawnMarch });
 
   if (!state) return null;
 
@@ -81,6 +81,29 @@ export default function GameBoard({ room, onLeave }: GameBoardProps) {
     !state.gameOver &&
     (visualPositions[currentTurnPlayer.sessionId] ?? currentTurnPlayer.position) !==
       currentTurnPlayer.position;
+
+  // Sequence the UX: roll dice → reveal → pawn marches.
+  // The server position may update immediately; we pause the visual march briefly so the dice can finish.
+  useEffect(() => {
+    if (!state.gameStarted || state.gameOver) {
+      setPausePawnMarch(false);
+      return;
+    }
+    if (state.diceRollSeq <= 0) return;
+
+    setPausePawnMarch(true);
+    const t = window.setTimeout(() => setPausePawnMarch(false), 660);
+    return () => clearTimeout(t);
+  }, [state.gameStarted, state.gameOver, state.diceRollSeq]);
+
+  // And only toast log lines after the pawn finishes marching.
+  useGameLogToasts(Array.from(state.log), {
+    paused:
+      !state.gameStarted ||
+      state.gameOver ||
+      pausePawnMarch ||
+      isMarching,
+  });
 
   useEffect(() => {
     prevTurnVisualRef.current = null;
