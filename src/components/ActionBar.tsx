@@ -2,13 +2,12 @@ import React, { useState } from "react";
 import { Room } from "colyseus.js";
 import { GameState, Player, Space } from "../game/schema";
 import { cn } from "../lib/utils";
+import LocationPurchaseModal from "./LocationPurchaseModal";
 import {
   Dices,
-  ShoppingCart,
   Check,
   Banknote,
   CreditCard,
-  Gavel,
   Home,
   Building2,
   Landmark,
@@ -133,34 +132,13 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
       )}
 
       {(canBuy || canDecline) && (
-        <div className="space-y-3 text-center">
-          <div>
-            <h3 className="text-lg font-bold text-white leading-tight">{currentSpace.name}</h3>
-            <p className="text-neutral-400 text-xs mt-1">Unowned — you may buy or send to auction</p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full">
-            {canBuy && (
-              <button
-                type="button"
-                onClick={() => room.send("buy")}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-md"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                Buy (${currentSpace.price})
-              </button>
-            )}
-            {canDecline && (
-              <button
-                type="button"
-                onClick={() => room.send("decline_purchase")}
-                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"
-              >
-                <Gavel className="w-4 h-4" />
-                Decline (auction)
-              </button>
-            )}
-          </div>
-        </div>
+        <LocationPurchaseModal
+          room={room}
+          space={currentSpace}
+          canBuy={canBuy}
+          canDecline={canDecline}
+          balance={currentPlayer?.balance ?? 0}
+        />
       )}
 
       {inAuction && !currentPlayer?.isBankrupt && (
@@ -263,7 +241,7 @@ export default function ActionBar({ room, state, currentPlayer, isMyTurn }: Acti
         </div>
       )}
 
-      {canEndTurn && (
+      {canEndTurn && !(canBuy || canDecline) && (
         <div className="flex flex-col items-center gap-2 text-center">
           <h3 className="text-sm font-semibold text-neutral-300">Action completed</h3>
           <button
