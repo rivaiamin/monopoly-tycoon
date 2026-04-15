@@ -21,6 +21,16 @@ interface BoardCarouselProps {
   passGoFlash?: boolean;
 }
 
+function spaceCode(s: Space, index: number): string {
+  const letters = (s.name || "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "");
+  const a = letters[0] ?? "X";
+  const b = letters[Math.min(letters.length - 1, 2)] ?? "Y";
+  const n = String((index % 90) + 10);
+  return `${a}${b}-${n}`;
+}
+
 function spaceHeaderClass(s: Space): string {
   if (s.type === "property" && s.groupId && GROUP_COLORS[s.groupId]) {
     return GROUP_COLORS[s.groupId];
@@ -120,8 +130,26 @@ export default function BoardCarousel({
                 )}
               >
                 <div
-                  className={cn("h-7 sm:h-8 w-full flex items-center justify-center relative", spaceHeaderClass(s))}
+                  className={cn(
+                    "h-7 sm:h-8 w-full flex items-center justify-center relative overflow-hidden",
+                    spaceHeaderClass(s)
+                  )}
                 >
+                  <img
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover opacity-40"
+                    loading="lazy"
+                    decoding="async"
+                    src={`https://picsum.photos/seed/${encodeURIComponent(
+                      `${s.type}-${safeIndex}-${s.name}`
+                    )}/200/300`}
+                  />
+                  <div className="absolute inset-0 bg-linear-to-b from-black/20 to-black/40" />
+
+                  <div className="absolute left-1 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded bg-black/35 border border-white/10 text-[8px] sm:text-[9px] font-mono text-white/90 tracking-wider">
+                    {spaceCode(s, safeIndex)}
+                  </div>
                   {owner && (
                     <div
                       className={cn(
