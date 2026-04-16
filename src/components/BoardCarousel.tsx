@@ -63,7 +63,7 @@ export default function BoardCarousel({
   const [panTiles, setPanTiles] = useState(0);
   const [dragPx, setDragPx] = useState(0);
   const dragPxRef = useRef(0);
-  const dragStateRef = useRef<{ active: boolean; startX: number } | null>(null);
+  const dragStateRef = useRef<{ active: boolean; startX: number; pointerId: number } | null>(null);
   const ignoreClickRef = useRef(false);
 
   useLayoutEffect(() => {
@@ -104,36 +104,36 @@ export default function BoardCarousel({
 
   const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (e.button !== 0) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    dragStateRef.current = { active: true, startX: e.clientX };
+    // Avoid pointer-capture here so tile clicks still fire reliably.
+    dragStateRef.current = { active: true, startX: e.clientX, pointerId: e.pointerId };
     ignoreClickRef.current = false;
+    dragPxRef.current = 0;
     setDragPx(0);
-  };
 
-  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
-    const st = dragStateRef.current;
-    if (!st?.active) return;
-    const dx = e.clientX - st.startX;
-    if (Math.abs(dx) > 6) ignoreClickRef.current = true;
-    dragPxRef.current = dx;
-    setDragPx(dx);
-  };
+    const onMove = (ev: PointerEvent) => {
+      const st = dragStateRef.current;
+      if (!st?.active) return;
+      if (ev.pointerId !== st.pointerId) return;
+      const dx = ev.clientX - st.startX;
+      if (Math.abs(dx) > 6) ignoreClickRef.current = true;
+      dragPxRef.current = dx;
+      setDragPx(dx);
+    };
 
-  const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (e) => {
-    const st = dragStateRef.current;
-    if (!st?.active) return;
-    dragStateRef.current = null;
-    commitDragToTiles(dragPxRef.current);
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      // no-op
-    }
-  };
+    const onEnd = (ev: PointerEvent) => {
+      const st = dragStateRef.current;
+      if (!st?.active) return;
+      if (ev.pointerId !== st.pointerId) return;
+      dragStateRef.current = null;
+      commitDragToTiles(dragPxRef.current);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onEnd);
+      window.removeEventListener("pointercancel", onEnd);
+    };
 
-  const onPointerCancel: React.PointerEventHandler<HTMLDivElement> = () => {
-    dragStateRef.current = null;
-    commitDragToTiles(dragPxRef.current);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onEnd);
+    window.addEventListener("pointercancel", onEnd);
   };
 
   return (
@@ -221,9 +221,6 @@ export default function BoardCarousel({
       <div
         className="w-full overflow-hidden flex justify-center h-full px-2 pt-5 touch-pan-y select-none"
         onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
       >
         <div
           ref={rowRef}

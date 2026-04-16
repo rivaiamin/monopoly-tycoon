@@ -209,7 +209,6 @@ export default function GameBoard({ room, onLeave }: GameBoardProps) {
           isMarching={isMarching}
           passGoFlash={passGoFlash}
           onSpaceClick={(spaceIndex) => {
-            if (actionModalActive) return;
             setInspectSpaceIndex(spaceIndex);
           }}
         />
