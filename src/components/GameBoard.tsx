@@ -8,6 +8,7 @@ import ActionBar from "./ActionBar";
 import RulesPanel from "./RulesPanel";
 import DiceRoller from "./DiceRoller";
 import BoardCarousel from "./BoardCarousel";
+import LocationPurchaseModal from "./LocationPurchaseModal";
 import { useVisualPawnPositions } from "../hooks/useVisualPawnPositions";
 import { useSmoothCarouselCenter } from "../hooks/useSmoothCarouselCenter";
 import { useGameLogToasts } from "../hooks/useGameLogToasts";
@@ -24,6 +25,7 @@ export default function GameBoard({ room, onLeave }: GameBoardProps) {
   const [passGoFlash, setPassGoFlash] = useState(false);
   const prevTurnVisualRef = useRef<number | null>(null);
   const [pausePawnMarch, setPausePawnMarch] = useState(false);
+  const [inspectSpaceIndex, setInspectSpaceIndex] = useState<number | null>(null);
   const [state, setState] = useState<GameState | null>(() =>
     room.state ? room.state.clone() : null
   );
@@ -56,6 +58,15 @@ export default function GameBoard({ room, onLeave }: GameBoardProps) {
   const currentTurnPlayer = state.currentTurnId
     ? state.players.get(state.currentTurnId)
     : undefined;
+
+  const myPos = currentPlayer?.position ?? 0;
+  const mySpace = state.board[myPos] as Space;
+  const actionModalActive = !!(
+    isMyTurn &&
+    state.turnPhase === "post_move_action" &&
+    mySpace.ownerId === "" &&
+    ["property", "railroad", "utility"].includes(mySpace.type)
+  );
 
   const rawCarouselStep = useMemo(() => {
     if (currentTurnPlayer && state.gameStarted && !state.gameOver) {
@@ -197,8 +208,23 @@ export default function GameBoard({ room, onLeave }: GameBoardProps) {
           mySessionId={room.sessionId}
           isMarching={isMarching}
           passGoFlash={passGoFlash}
+          onSpaceClick={(spaceIndex) => {
+            if (actionModalActive) return;
+            setInspectSpaceIndex(spaceIndex);
+          }}
         />
       </div>
+
+      {inspectSpaceIndex !== null && !actionModalActive && (
+        <LocationPurchaseModal
+          room={room}
+          space={state.board[inspectSpaceIndex] as Space}
+          canBuy={false}
+          canDecline={false}
+          balance={currentPlayer?.balance ?? 0}
+          onClose={() => setInspectSpaceIndex(null)}
+        />
+      )}
 
       <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-4 p-4 pt-3">
         <div className="flex-1 min-h-0 overflow-y-auto min-w-0">

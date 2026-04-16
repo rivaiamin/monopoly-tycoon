@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Car } from "lucide-react";
 import { Player, Space } from "../game/schema";
@@ -19,6 +19,7 @@ interface BoardCarouselProps {
   isMarching?: boolean;
   /** Brief highlight when the animated path crosses GO (39 → 0). */
   passGoFlash?: boolean;
+  onSpaceClick?: (spaceIndex: number) => void;
 }
 
 function spaceCode(s: Space, index: number): string {
@@ -55,9 +56,15 @@ export default function BoardCarousel({
   mySessionId,
   isMarching = false,
   passGoFlash = false,
+  onSpaceClick,
 }: BoardCarouselProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [slotPx, setSlotPx] = useState(120);
+  const [panTiles, setPanTiles] = useState(0);
+  const [dragPx, setDragPx] = useState(0);
+  const dragPxRef = useRef(0);
+  const dragStateRef = useRef<{ active: boolean; startX: number } | null>(null);
+  const ignoreClickRef = useRef(false);
 
   useLayoutEffect(() => {
     const row = rowRef.current;
@@ -78,12 +85,77 @@ export default function BoardCarousel({
     return () => ro.disconnect();
   }, []);
 
-  const base = Math.floor(centerSmooth);
-  const frac = Math.min(1, Math.max(0, centerSmooth - base));
+  const effectiveCenter = useMemo(() => {
+    const dragTiles = slotPx > 0 ? -dragPx / slotPx : 0;
+    return centerSmooth + panTiles + dragTiles;
+  }, [centerSmooth, panTiles, dragPx, slotPx]);
+
+  const base = Math.floor(effectiveCenter);
+  const frac = Math.min(1, Math.max(0, effectiveCenter - base));
   const slidePx = frac * slotPx;
 
+  const commitDragToTiles = (finalDragPx: number) => {
+    if (slotPx <= 0) return;
+    const deltaTiles = Math.round(-finalDragPx / slotPx);
+    if (deltaTiles !== 0) setPanTiles((t) => t + deltaTiles);
+    dragPxRef.current = 0;
+    setDragPx(0);
+  };
+
+  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    if (e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStateRef.current = { active: true, startX: e.clientX };
+    ignoreClickRef.current = false;
+    setDragPx(0);
+  };
+
+  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    const st = dragStateRef.current;
+    if (!st?.active) return;
+    const dx = e.clientX - st.startX;
+    if (Math.abs(dx) > 6) ignoreClickRef.current = true;
+    dragPxRef.current = dx;
+    setDragPx(dx);
+  };
+
+  const onPointerUp: React.PointerEventHandler<HTMLDivElement> = (e) => {
+    const st = dragStateRef.current;
+    if (!st?.active) return;
+    dragStateRef.current = null;
+    commitDragToTiles(dragPxRef.current);
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // no-op
+    }
+  };
+
+  const onPointerCancel: React.PointerEventHandler<HTMLDivElement> = () => {
+    dragStateRef.current = null;
+    commitDragToTiles(dragPxRef.current);
+  };
+
   return (
-    <section className="relative w-full h-44 sm:h-48 overflow-hidden bg-neutral-900 rounded-xl border border-neutral-800 flex items-center justify-center shadow-2xl shrink-0">
+    <section
+      className="relative w-full h-56 sm:h-64 overflow-hidden bg-neutral-900 rounded-xl border border-neutral-800 flex items-center justify-center shadow-2xl shrink-0"
+      tabIndex={0}
+      aria-label="Board map carousel"
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          setPanTiles((t) => t - 1);
+        }
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          setPanTiles((t) => t + 1);
+        }
+        if (e.key === "Escape") {
+          setPanTiles(0);
+          setDragPx(0);
+        }
+      }}
+    >
       <div className="absolute top-2 left-4 text-[10px] font-bold text-neutral-500 tracking-widest uppercase z-20">
         The Map
       </div>
@@ -99,7 +171,60 @@ export default function BoardCarousel({
         </div>
       )}
 
-      <div className="w-full overflow-hidden flex justify-center px-2 pt-5">
+      <button
+        type="button"
+        aria-label="Previous tiles"
+        onClick={() => setPanTiles((t) => t - 1)}
+        className={cn(
+          "absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-30",
+          "w-9 h-9 rounded-full border border-white/10 bg-black/35 backdrop-blur-sm",
+          "text-white/90 hover:bg-black/55 hover:border-white/20",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/80",
+          "transition"
+        )}
+      >
+        <span aria-hidden="true">‹</span>
+      </button>
+
+      <button
+        type="button"
+        aria-label="Next tiles"
+        onClick={() => setPanTiles((t) => t + 1)}
+        className={cn(
+          "absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-30",
+          "w-9 h-9 rounded-full border border-white/10 bg-black/35 backdrop-blur-sm",
+          "text-white/90 hover:bg-black/55 hover:border-white/20",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/80",
+          "transition"
+        )}
+      >
+        <span aria-hidden="true">›</span>
+      </button>
+
+      {panTiles !== 0 && (
+        <button
+          type="button"
+          aria-label="Recenter map view"
+          onClick={() => setPanTiles(0)}
+          className={cn(
+            "absolute top-2 left-1/2 -translate-x-1/2 z-30",
+            "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
+            "bg-black/35 border border-white/10 text-white/80 hover:bg-black/55 hover:text-white/95",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/80",
+            "transition"
+          )}
+        >
+          Recenter
+        </button>
+      )}
+
+      <div
+        className="w-full overflow-hidden flex justify-center h-full px-2 pt-5 touch-pan-y select-none"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+      >
         <div
           ref={rowRef}
           className="flex items-center gap-2 sm:gap-4 will-change-transform"
@@ -126,8 +251,26 @@ export default function BoardCarousel({
                   isCenter
                     ? "scale-105 sm:scale-110 shadow-[0_0_20px_rgba(255,255,255,0.08)] z-10 border-2 border-amber-100/90"
                     : "opacity-50 scale-[0.88] sm:scale-90 border border-neutral-700",
-                  "bg-neutral-800 overflow-hidden"
+                  "bg-neutral-800 overflow-hidden",
+                  onSpaceClick && "cursor-pointer"
                 )}
+                role={onSpaceClick ? "button" : undefined}
+                tabIndex={onSpaceClick ? 0 : undefined}
+                onClick={() => {
+                  if (!onSpaceClick) return;
+                  if (ignoreClickRef.current) {
+                    ignoreClickRef.current = false;
+                    return;
+                  }
+                  onSpaceClick(safeIndex);
+                }}
+                onKeyDown={(e) => {
+                  if (!onSpaceClick) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSpaceClick(safeIndex);
+                  }
+                }}
               >
                 <div
                   className={cn(
