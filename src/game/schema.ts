@@ -11,6 +11,9 @@ export class Player extends Schema {
   @type("number") getOutOfJailCards: number = 0;
   @type("boolean") isBankrupt: boolean = false;
   @type("boolean") isReady: boolean = false;
+  /** Stable id from the browser (localStorage); used to resume the same seat after disconnect. */
+  @type("string") clientId: string = "";
+  @type("boolean") connected: boolean = true;
 }
 
 export class Space extends Schema {

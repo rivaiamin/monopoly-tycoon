@@ -6,6 +6,8 @@ import { CHANCE_CARDS, CHEST_CARDS, shuffleIndices, CardDef } from "./cards";
 export class PropertyTycoonRoom extends Room<GameState> {
   maxClients = 4;
 
+  private explicitLeaves = new Set<string>();
+
   private chanceOrder: number[] = [];
   private chestOrder: number[] = [];
   private chanceIdx = 0;
@@ -79,6 +81,29 @@ export class PropertyTycoonRoom extends Room<GameState> {
     });
 
     this.onMessage("collect_free_parking", (client) => this.handleCollectFreeParking(client.sessionId));
+
+    // Treat refresh/tab-close as reconnectable. Only remove the player immediately if they explicitly
+    // chose to leave via the UI.
+    this.onMessage("leave_game", (client) => {
+      this.explicitLeaves.add(client.sessionId);
+    });
+  }
+
+  /** Rebinds a player to a new Colyseus session id (same logical seat, new websocket). */
+  private rebindPlayerSession(oldSessionId: string, newSessionId: string, player: Player) {
+    player.sessionId = newSessionId;
+    player.connected = true;
+    this.state.players.delete(oldSessionId);
+    this.state.players.set(newSessionId, player);
+
+    this.state.board.forEach((s) => {
+      const sp = s as Space;
+      if (sp.ownerId === oldSessionId) sp.ownerId = newSessionId;
+    });
+
+    if (this.state.currentTurnId === oldSessionId) this.state.currentTurnId = newSessionId;
+    if (this.state.winnerId === oldSessionId) this.state.winnerId = newSessionId;
+    if (this.state.auctionHighBidderId === oldSessionId) this.state.auctionHighBidderId = newSessionId;
   }
 
   private shuffleDecks() {
@@ -862,13 +887,47 @@ export class PropertyTycoonRoom extends Room<GameState> {
     }
   }
 
-  onJoin(client: Client, options: { name?: string; token?: string }) {
+  onJoin(client: Client, options: { name?: string; token?: string; clientId?: string }) {
+    const clientId = (options?.clientId || "").trim();
+
+    // Resume an existing seat (same browser session) after refresh or long disconnect.
+    if (clientId) {
+      let offlineSeat: { sid: string; pl: Player } | null = null;
+      let onlineSameClient: Player | null = null;
+      for (const [sid, p] of this.state.players.entries()) {
+        const pl = p as Player;
+        if (pl.clientId !== clientId) continue;
+        if (!pl.connected) offlineSeat = { sid, pl };
+        else onlineSameClient = pl;
+      }
+      if (onlineSameClient) {
+        // Same browser already has an active seat (e.g. reconnect window); second join must use reconnect, not joinById.
+        client.leave(4000, "Already in this room — use reconnect");
+        return;
+      }
+      if (offlineSeat) {
+        this.broadcastLog(`${offlineSeat.pl.name} reconnected.`);
+        this.rebindPlayerSession(offlineSeat.sid, client.sessionId, offlineSeat.pl);
+        this.explicitLeaves.delete(client.sessionId);
+        return;
+      }
+    }
+
     if (this.state.gameStarted) {
       client.leave(4000, "Game already in progress");
       return;
     }
+
+    if (this.state.players.size >= this.maxClients) {
+      client.leave(4000, "Room is full");
+      return;
+    }
+
+    this.explicitLeaves.delete(client.sessionId);
     const player = new Player();
     player.sessionId = client.sessionId;
+    player.clientId = clientId;
+    player.connected = true;
     player.name = options?.name || `Player ${this.state.players.size + 1}`;
     player.token = options?.token || "car";
     this.state.players.set(client.sessionId, player);
@@ -876,16 +935,28 @@ export class PropertyTycoonRoom extends Room<GameState> {
   }
 
   async onLeave(client: Client, consented: boolean) {
-    if (!consented) {
+    const leavingId = client.sessionId;
+    const didExplicitLeave = this.explicitLeaves.has(leavingId);
+
+    // If the player didn't explicitly press "Leave", keep their seat for a bit so refresh works.
+    if (!consented || !didExplicitLeave) {
+      const p = this.state.players.get(leavingId) as Player | undefined;
+      // Mark offline immediately so joinById + clientId can rebind while Colyseus still holds the reconnect slot.
+      // Successful token reconnect resolves allowReconnection; we set connected true again below.
+      if (p) p.connected = false;
       try {
         await this.allowReconnection(client, 45);
+        if (p) p.connected = true;
         return;
       } catch {
-        /* reconnection window expired */
+        if (p?.clientId) {
+          this.broadcastLog(`${p.name} went offline — rejoin this room from the same browser to resume.`);
+          return;
+        }
       }
     }
 
-    const leavingId = client.sessionId;
+    this.explicitLeaves.delete(leavingId);
     const player = this.state.players.get(leavingId) as Player | undefined;
 
     const idsBefore = this.activePlayerIds();

@@ -79,6 +79,9 @@ export default function PlayerList({ players, board, currentTurnId, myId }: Play
                     {player.sessionId === myId && (
                       <span className={cn("text-[9px] font-semibold", accentText)}>You</span>
                     )}
+                    {!player.connected && (
+                      <span className="text-[9px] uppercase text-rose-400 font-semibold">Offline</span>
+                    )}
                     {player.isReady && !currentTurnId && (
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                     )}

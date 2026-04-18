@@ -1,10 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { User, Car, Plane, Ship, Anchor, Dog, Cat, Crown, Gem, Hash } from "lucide-react";
 import { cn } from "../lib/utils";
 
 interface LobbyProps {
   onJoin: (name: string, token: string, roomId?: string) => void;
 }
+
+const STORAGE_KEYS = {
+  name: "ptycoon:name",
+  token: "ptycoon:token",
+  roomId: "ptycoon:roomId",
+} as const;
 
 const TOKENS = [
   { id: "car", icon: Car, label: "Race Car" },
@@ -22,6 +28,16 @@ export default function Lobby({ onJoin }: LobbyProps) {
   const [roomId, setRoomId] = useState("");
   const [selectedToken, setSelectedToken] = useState("car");
 
+  useEffect(() => {
+    const storedName = localStorage.getItem(STORAGE_KEYS.name);
+    const storedToken = localStorage.getItem(STORAGE_KEYS.token);
+    const storedRoomId = localStorage.getItem(STORAGE_KEYS.roomId);
+
+    if (storedName) setName(storedName);
+    if (storedToken && TOKENS.some((t) => t.id === storedToken)) setSelectedToken(storedToken);
+    if (storedRoomId) setRoomId(storedRoomId);
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
@@ -32,10 +48,13 @@ export default function Lobby({ onJoin }: LobbyProps) {
   return (
     <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold tracking-tighter mb-2 bg-gradient-to-br from-orange-400 to-red-600 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold tracking-tighter mb-2 bg-linear-to-br from-orange-400 to-red-600 bg-clip-text text-transparent">
           PROPERTY TYCOON
         </h1>
-        <p className="text-zinc-400">Enter your name and pick a token to start</p>
+        <p className="text-zinc-400">
+          Enter your name and an optional room ID. Below that, choose your <span className="text-zinc-300">board piece</span>{" "}
+          (car, plane, etc.). Joining remembers you on this browser so you can reconnect after a refresh.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -73,9 +92,10 @@ export default function Lobby({ onJoin }: LobbyProps) {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-2">
-            Select Token
+          <label className="block text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-1">
+            Board piece
           </label>
+          <p className="text-zinc-600 text-xs mb-2">Tap an icon — this is your token on the board.</p>
           <div className="grid grid-cols-4 gap-3">
             {TOKENS.map((token) => (
               <button
